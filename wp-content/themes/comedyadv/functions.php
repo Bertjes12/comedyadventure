@@ -1,0 +1,419 @@
+<?php
+/**
+ * Comedy Adventure theme — main bootstrap.
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+define( 'COMEDYADV_VERSION', '1.2.0' );
+define( 'COMEDYADV_DEMO_VERSION', '1.8.0' ); // bump to trigger demo re-import on next admin load
+define( 'COMEDYADV_MENU_VERSION', '2' );     // bump to rebuild the primary nav menu on next admin load
+define( 'COMEDYADV_DIR', get_template_directory() );
+
+require_once COMEDYADV_DIR . '/inc/cpt.php';
+require_once COMEDYADV_DIR . '/inc/meta-boxes.php';
+require_once COMEDYADV_DIR . '/inc/demo-import.php';
+
+/**
+ * Theme setup.
+ */
+function comedyadv_setup() {
+	add_theme_support( 'title-tag' );
+	add_theme_support( 'post-thumbnails' );
+	add_theme_support( 'html5', array( 'search-form', 'comment-form', 'comment-list', 'gallery', 'caption', 'style', 'script' ) );
+	add_theme_support( 'automatic-feed-links' );
+	add_theme_support( 'responsive-embeds' );
+
+	register_nav_menus( array(
+		'primary' => __( 'Hoofdnavigatie', 'comedyadv' ),
+		'footer'  => __( 'Footer menu', 'comedyadv' ),
+	) );
+}
+add_action( 'after_setup_theme', 'comedyadv_setup' );
+
+/**
+ * Enqueue.
+ */
+function comedyadv_enqueue_assets() {
+	wp_enqueue_style( 'comedyadv-fonts', 'https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap', array(), null );
+	wp_enqueue_style( 'comedyadv-styles', get_theme_file_uri( 'assets/css/styles.css' ), array( 'comedyadv-fonts' ), COMEDYADV_VERSION );
+	wp_enqueue_style( 'comedyadv-style',  get_stylesheet_uri(), array( 'comedyadv-styles' ), COMEDYADV_VERSION );
+	wp_enqueue_script( 'comedyadv-main',  get_theme_file_uri( 'assets/js/main.js' ), array(), COMEDYADV_VERSION, true );
+}
+add_action( 'wp_enqueue_scripts', 'comedyadv_enqueue_assets' );
+
+function comedyadv_resource_hints( $urls, $relation_type ) {
+	if ( 'preconnect' === $relation_type ) {
+		$urls[] = array( 'href' => 'https://fonts.gstatic.com', 'crossorigin' );
+	}
+	return $urls;
+}
+add_filter( 'wp_resource_hints', 'comedyadv_resource_hints', 10, 2 );
+
+/**
+ * Static-only pages we still create.
+ */
+function comedyadv_static_pages() {
+	return array(
+		array( 'slug' => 'home',    'title' => 'Home' ),
+		array( 'slug' => 'agenda',  'title' => 'Agenda' ),
+		array( 'slug' => 'contact', 'title' => 'Contact' ),
+	);
+}
+
+/**
+ * Slugs of pages from previous theme versions that conflict with CPT URLs.
+ */
+function comedyadv_obsolete_page_slugs() {
+	return array(
+		'comedians', 'workshops', 'aanbod',
+		'comedy-workshop', 'roast-workshop', 'lama-workshop',
+		'plat-amsterdams', 'plat-haags', 'theatersport',
+	);
+}
+
+/**
+ * Activation flow.
+ *
+ * `after_switch_theme` fires on `setup_theme` — before `init` — so the CPT
+ * registration that's hooked to `init` hasn't run yet. We register them
+ * manually first so the migration and import can use them right away.
+ */
+function comedyadv_after_switch_theme() {
+	if ( function_exists( 'comedyadv_register_cpts' ) ) {
+		comedyadv_register_cpts();
+	}
+	comedyadv_remove_obsolete_pages();
+	comedyadv_migrate_cities_to_cpt(); // Defined in inc/demo-import.php.
+	$created = comedyadv_create_static_pages();
+	comedyadv_set_front_page( $created );
+	comedyadv_create_primary_menu();
+	comedyadv_import_demo_content();
+	flush_rewrite_rules();
+}
+add_action( 'after_switch_theme', 'comedyadv_after_switch_theme' );
+
+/**
+ * Auto-import demo content when the demo version changes. Runs on the next admin
+ * page load after a theme update. Idempotent — only adds posts whose slugs are
+ * missing — so it won't disturb user-added or user-edited content.
+ */
+function comedyadv_maybe_import_demo() {
+	if ( ! is_admin() ) {
+		return;
+	}
+	if ( get_option( 'comedyadv_demo_version' ) === COMEDYADV_DEMO_VERSION ) {
+		return;
+	}
+	comedyadv_remove_obsolete_pages(); // delete pages that conflict with newer CPT URLs
+	comedyadv_create_static_pages();   // ensure pages exist (idempotent)
+	comedyadv_import_demo_content();   // ensure CPT posts exist (idempotent)
+	flush_rewrite_rules();
+	update_option( 'comedyadv_demo_version', COMEDYADV_DEMO_VERSION );
+}
+add_action( 'admin_init', 'comedyadv_maybe_import_demo' );
+
+/**
+ * Retry pending image migrations on every admin load, regardless of demo version.
+ * Cheap probe-query first; only runs the actual migration when there's work to do.
+ */
+function comedyadv_ensure_image_migrations() {
+	if ( ! is_admin() ) {
+		return;
+	}
+
+	$pending_workshops = get_posts( array(
+		'post_type'      => 'workshop',
+		'posts_per_page' => 1,
+		'meta_key'       => '_comedyadv_image_url',
+		'fields'         => 'ids',
+	) );
+	if ( $pending_workshops ) {
+		comedyadv_migrate_workshop_images_to_featured();
+	}
+
+	$pending_locaties = get_posts( array(
+		'post_type'      => 'locatie',
+		'posts_per_page' => 1,
+		'meta_key'       => '_comedyadv_city_image',
+		'fields'         => 'ids',
+	) );
+	if ( $pending_locaties ) {
+		comedyadv_migrate_city_images_to_featured();
+	}
+
+	$pending_aanbod = get_posts( array(
+		'post_type'      => 'aanbod',
+		'posts_per_page' => 1,
+		'meta_key'       => '_comedyadv_image_url',
+		'fields'         => 'ids',
+	) );
+	if ( $pending_aanbod ) {
+		comedyadv_migrate_aanbod_images_to_featured();
+	}
+}
+add_action( 'admin_init', 'comedyadv_ensure_image_migrations', 99 );
+
+/**
+ * Rebuild the primary nav menu when its version changes. Bump COMEDYADV_MENU_VERSION
+ * after editing the nav_items list in comedyadv_create_primary_menu().
+ *
+ * Note: this fully rebuilds the "Hoofdnavigatie" menu, replacing any manual edits.
+ */
+function comedyadv_maybe_rebuild_menu() {
+	if ( ! is_admin() ) {
+		return;
+	}
+	if ( get_option( 'comedyadv_menu_version' ) === COMEDYADV_MENU_VERSION ) {
+		return;
+	}
+	comedyadv_create_primary_menu();
+	update_option( 'comedyadv_menu_version', COMEDYADV_MENU_VERSION );
+}
+add_action( 'admin_init', 'comedyadv_maybe_rebuild_menu', 50 );
+
+function comedyadv_remove_obsolete_pages() {
+	foreach ( comedyadv_obsolete_page_slugs() as $slug ) {
+		$page = get_page_by_path( $slug );
+		if ( $page && 'page' === $page->post_type ) {
+			wp_delete_post( $page->ID, true );
+		}
+		$nested = get_page_by_path( 'workshops/' . $slug );
+		if ( $nested && 'page' === $nested->post_type ) {
+			wp_delete_post( $nested->ID, true );
+		}
+	}
+}
+
+function comedyadv_create_static_pages() {
+	$created = array();
+	foreach ( comedyadv_static_pages() as $page ) {
+		$existing = get_page_by_path( $page['slug'] );
+		if ( $existing ) {
+			$created[ $page['slug'] ] = $existing->ID;
+			continue;
+		}
+		$id = wp_insert_post( array(
+			'post_title'  => $page['title'],
+			'post_name'   => $page['slug'],
+			'post_status' => 'publish',
+			'post_type'   => 'page',
+		) );
+		if ( ! is_wp_error( $id ) ) {
+			$created[ $page['slug'] ] = $id;
+		}
+	}
+	return $created;
+}
+
+function comedyadv_set_front_page( $created ) {
+	$home_id = isset( $created['home'] ) ? (int) $created['home'] : 0;
+	if ( ! $home_id ) {
+		$home    = get_page_by_path( 'home' );
+		$home_id = $home ? (int) $home->ID : 0;
+	}
+	if ( $home_id ) {
+		update_option( 'show_on_front', 'page' );
+		update_option( 'page_on_front', $home_id );
+	}
+}
+
+function comedyadv_create_primary_menu() {
+	$menu_name = 'Hoofdnavigatie';
+	$menu      = wp_get_nav_menu_object( $menu_name );
+
+	if ( ! $menu ) {
+		$menu_id = wp_create_nav_menu( $menu_name );
+	} else {
+		$menu_id = (int) $menu->term_id;
+		$items   = wp_get_nav_menu_items( $menu_id );
+		if ( $items ) {
+			foreach ( $items as $item ) {
+				wp_delete_post( $item->ID, true );
+			}
+		}
+	}
+
+	$nav_items = array(
+		array( 'type' => 'archive', 'object' => 'comedian', 'label' => 'Comedians' ),
+		array( 'type' => 'archive', 'object' => 'aanbod',   'label' => 'Aanbod' ),
+		array( 'type' => 'archive', 'object' => 'workshop', 'label' => 'Workshops' ),
+		array( 'type' => 'page',    'slug'   => 'agenda',   'label' => 'Agenda' ),
+		array( 'type' => 'archive', 'object' => 'locatie',  'label' => 'Locaties' ),
+		array( 'type' => 'page',    'slug'   => 'contact',  'label' => 'Contact' ),
+	);
+
+	foreach ( $nav_items as $item ) {
+		$args = array( 'menu-item-title' => $item['label'], 'menu-item-status' => 'publish' );
+		if ( 'page' === $item['type'] ) {
+			$page = get_page_by_path( $item['slug'] );
+			if ( ! $page ) {
+				continue;
+			}
+			$args['menu-item-object']    = 'page';
+			$args['menu-item-object-id'] = $page->ID;
+			$args['menu-item-type']      = 'post_type';
+		} else {
+			$args['menu-item-url']  = get_post_type_archive_link( $item['object'] );
+			$args['menu-item-type'] = 'custom';
+		}
+		wp_update_nav_menu_item( $menu_id, 0, $args );
+	}
+
+	$contact = get_page_by_path( 'contact' );
+	if ( $contact ) {
+		wp_update_nav_menu_item( $menu_id, 0, array(
+			'menu-item-title'     => 'Boek een show',
+			'menu-item-object'    => 'page',
+			'menu-item-object-id' => $contact->ID,
+			'menu-item-type'      => 'post_type',
+			'menu-item-status'    => 'publish',
+			'menu-item-classes'   => 'nav__cta-item',
+		) );
+	}
+
+	$locations            = get_theme_mod( 'nav_menu_locations', array() );
+	$locations['primary'] = $menu_id;
+	set_theme_mod( 'nav_menu_locations', $locations );
+}
+
+function comedyadv_primary_nav() {
+	if ( has_nav_menu( 'primary' ) ) {
+		wp_nav_menu( array(
+			'theme_location' => 'primary',
+			'container'      => false,
+			'menu_class'     => 'nav__list',
+			'walker'         => new Comedyadv_Nav_Walker(),
+			'fallback_cb'    => 'comedyadv_primary_nav_fallback',
+		) );
+		return;
+	}
+	comedyadv_primary_nav_fallback();
+}
+
+function comedyadv_primary_nav_fallback() {
+	$current_url = is_singular() ? get_permalink() : '';
+
+	$items = array(
+		array( 'label' => 'Comedians', 'url' => get_post_type_archive_link( 'comedian' ) ),
+		array( 'label' => 'Aanbod',    'url' => get_post_type_archive_link( 'aanbod' ) ),
+		array( 'label' => 'Workshops', 'url' => get_post_type_archive_link( 'workshop' ) ),
+		array( 'label' => 'Agenda',    'url' => comedyadv_url( 'agenda' ) ),
+		array( 'label' => 'Locaties',  'url' => get_post_type_archive_link( 'locatie' ) ),
+		array( 'label' => 'Contact',   'url' => comedyadv_url( 'contact' ) ),
+	);
+
+	echo '<ul class="nav__list">';
+	foreach ( $items as $item ) {
+		if ( ! $item['url'] ) {
+			continue;
+		}
+		$class = 'nav__link';
+		if ( $current_url && trailingslashit( $current_url ) === trailingslashit( $item['url'] ) ) {
+			$class .= ' is-active';
+		}
+		printf( '<li><a class="%1$s" href="%2$s">%3$s</a></li>', esc_attr( $class ), esc_url( $item['url'] ), esc_html( $item['label'] ) );
+	}
+	$contact_url = comedyadv_url( 'contact' );
+	printf( '<li><a class="nav__link nav__cta" href="%1$s">Boek een show</a></li>', esc_url( $contact_url ) );
+	echo '</ul>';
+}
+
+class Comedyadv_Nav_Walker extends Walker_Nav_Menu {
+	public function start_lvl( &$output, $depth = 0, $args = null ) {
+		$output .= '<ul class="nav__sub">';
+	}
+	public function end_lvl( &$output, $depth = 0, $args = null ) {
+		$output .= '</ul>';
+	}
+	public function start_el( &$output, $item, $depth = 0, $args = null, $id = 0 ) {
+		$classes  = array( 'nav__link' );
+		$item_cls = empty( $item->classes ) ? array() : (array) $item->classes;
+		if ( in_array( 'nav__cta-item', $item_cls, true ) ) {
+			$classes[] = 'nav__cta';
+		}
+		if ( in_array( 'current-menu-item', $item_cls, true ) || in_array( 'current_page_item', $item_cls, true ) ) {
+			$classes[] = 'is-active';
+		}
+		$attrs = sprintf( ' href="%s" class="%s"', esc_url( $item->url ), esc_attr( implode( ' ', $classes ) ) );
+		$output .= '<li>';
+		$output .= '<a' . $attrs . '>' . esc_html( $item->title ) . '</a>';
+	}
+	public function end_el( &$output, $item, $depth = 0, $args = null ) {
+		$output .= '</li>';
+	}
+}
+
+/**
+ * URL helper. Looks up by slug across pages, locatie CPT, and known archive shortcuts.
+ */
+function comedyadv_url( $slug ) {
+	$page = get_page_by_path( $slug );
+	if ( $page ) {
+		return get_permalink( $page );
+	}
+	$loc = get_page_by_path( $slug, OBJECT, 'locatie' );
+	if ( $loc ) {
+		return get_permalink( $loc );
+	}
+	$archive_map = array(
+		'locaties'  => 'locatie',
+		'comedians' => 'comedian',
+		'workshops' => 'workshop',
+		'aanbod'    => 'aanbod',
+	);
+	if ( isset( $archive_map[ $slug ] ) ) {
+		$url = get_post_type_archive_link( $archive_map[ $slug ] );
+		if ( $url ) {
+			return $url;
+		}
+	}
+	return home_url( '/' . $slug . '/' );
+}
+
+function comedyadv_breadcrumbs( $crumbs ) {
+	$out = array();
+	foreach ( $crumbs as $crumb ) {
+		if ( is_array( $crumb ) ) {
+			$out[] = '<a href="' . esc_url( $crumb[1] ) . '">' . esc_html( $crumb[0] ) . '</a>';
+		} else {
+			$out[] = esc_html( $crumb );
+		}
+	}
+	return implode( ' / ', $out );
+}
+
+function comedyadv_meta( $post_id, $key, $default = '' ) {
+	$v = get_post_meta( $post_id, $key, true );
+	return ( '' === $v || null === $v ) ? $default : $v;
+}
+
+function comedyadv_show_day( $date ) {
+	$ts = strtotime( $date );
+	return $ts ? gmdate( 'd', $ts ) : '';
+}
+
+function comedyadv_show_month( $date ) {
+	$months = array( 1=>'Jan',2=>'Feb',3=>'Mrt',4=>'Apr',5=>'Mei',6=>'Jun',7=>'Jul',8=>'Aug',9=>'Sep',10=>'Okt',11=>'Nov',12=>'Dec' );
+	$ts = strtotime( $date );
+	return $ts ? $months[ (int) gmdate( 'n', $ts ) ] : '';
+}
+
+function comedyadv_archive_url( $post_type ) {
+	$url = get_post_type_archive_link( $post_type );
+	return $url ? $url : home_url( '/' );
+}
+
+/**
+ * Format YYYY-MM-DD as "12 mei 2026".
+ */
+function comedyadv_show_long_date( $date ) {
+	$ts = strtotime( $date );
+	if ( ! $ts ) {
+		return '';
+	}
+	$months = array( 1=>'januari',2=>'februari',3=>'maart',4=>'april',5=>'mei',6=>'juni',7=>'juli',8=>'augustus',9=>'september',10=>'oktober',11=>'november',12=>'december' );
+	return (int) gmdate( 'j', $ts ) . ' ' . $months[ (int) gmdate( 'n', $ts ) ] . ' ' . gmdate( 'Y', $ts );
+}

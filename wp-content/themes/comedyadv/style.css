@@ -1,0 +1,15 @@
+/*
+Theme Name: Comedy Adventure
+Theme URI: https://comedyadventure.nl
+Author: Comedy Adventure
+Author URI: https://comedyadventure.nl
+Description: Custom WordPress-thema voor Comedy Adventure. Het ultieme entertainment voor elk event — stand-up comedyshows door heel Nederland.
+Version: 1.0.0
+Requires at least: 6.0
+Requires PHP: 7.4
+License: GPL v2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
+Text Domain: comedyadv
+*/
+
+/* The actual styles live in assets/css/styles.css and are enqueued via functions.php */
