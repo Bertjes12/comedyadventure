@@ -17,6 +17,9 @@ jobs:
 
       - name: Deploy via SFTP
         run: |
-          sshpass -p "${{ secrets.SSH_PASSWORD }}" sftp -o StrictHostKeyChecking=no -P 22 ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} << 'EOF'
-          put -r wp-content/themes/comedyadv /customers/8/8/0/comedyadventure.nl/webroots/sites/comedyadventure.nl/wp-content/themes/comedyadv
-          EOF
+          printf 'put -r wp-content/themes/comedyadv /customers/8/8/0/comedyadventure.nl/webroots/sites/comedyadventure.nl/wp-content/themes/comedyadv\n' > /tmp/sftp_batch
+          sshpass -p "${{ secrets.SSH_PASSWORD }}" sftp \
+            -o StrictHostKeyChecking=no \
+            -P 22 \
+            -b /tmp/sftp_batch \
+            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}
