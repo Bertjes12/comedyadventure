@@ -13,14 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install sshpass
-        run: sudo apt-get install -y sshpass
+      - name: Install lftp
+        run: sudo apt-get install -y lftp
 
       - name: Deploy via SFTP
         run: |
-          printf 'put -r wp-content/themes/comedyadv /customers/8/8/0/comedyadventure.nl/webroots/sites/comedyadventure.nl/wp-content/themes/comedyadv\n' > /tmp/sftp_batch
-          sshpass -p "${{ secrets.SSH_PASSWORD }}" sftp \
-            -o StrictHostKeyChecking=no \
-            -P 22 \
-            -b /tmp/sftp_batch \
-            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}
+          lftp -u "${{ secrets.SSH_USERNAME }}","${{ secrets.SSH_PASSWORD }}" \
+            sftp://${{ secrets.SSH_HOST }} \
+            -e "mirror -R wp-content/themes/comedyadv /customers/8/8/0/comedyadventure.nl/webroots/sites/comedyadventure.nl/wp-content/themes/comedyadv; bye"
