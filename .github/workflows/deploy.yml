@@ -12,13 +12,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy via SFTP
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+      - name: Deploy via FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          port: 22
-          local_path: ./wp-content/themes/comedyadv/*
-          remote_path: /customers/8/8/0/comedyadventure.nl/webroots/sites/comedyadventure.nl/wp-content/themes/comedyadv
-          sftp_only: true
+          protocol: ftps
+          port: 21
+          local-dir: ./wp-content/themes/comedyadv/
+          server-dir: /customers/8/8/0/comedyadventure.nl/webroots/sites/comedyadventure.nl/wp-content/themes/comedyadv/
