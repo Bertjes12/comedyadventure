@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'wp-content/themes/comedyadv/**'
+  workflow_dispatch:
 
 jobs:
   deploy:
