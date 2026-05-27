@@ -12,8 +12,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install lftp
         run: sudo apt-get install -y lftp
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan ${{ vars.SSH_HOST }} >> ~/.ssh/known_hosts
       - name: Deploy via SFTP
         run: |
-          lftp -u "${{ vars.SSH_USERNAME }}","${{ secrets.FTP_PASSWORD }}" \
+          lftp -u "${{ vars.SSH_USERNAME }}", \
             sftp://${{ vars.SSH_HOST }} \
-            -e "set sftp:auto-confirm yes; mirror -R wp-content/themes/comedyadv /customers/8/8/0/comedyadventure.nl/webroots/sites/comedyadventure.nl/wp-content/themes/comedyadv; bye"
+            -e "set sftp:connect-program 'ssh -i ~/.ssh/id_ed25519'; se
