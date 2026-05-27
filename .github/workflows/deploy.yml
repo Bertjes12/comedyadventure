@@ -34,7 +34,7 @@ jobs:
           SSH_HOST: ${{ secrets.SSH_HOST }}
         run: |
           echo "open -u \"$SSH_USERNAME\",\"$SSH_PASSWORD\" ftp://$SSH_HOST" > /tmp/list.lftp
-          echo "ls" >> /tmp/list.lftp
+          echo "find webroots -maxdepth 4 -type d" >> /tmp/list.lftp
           echo "bye" >> /tmp/list.lftp
           lftp -f /tmp/list.lftp
 
