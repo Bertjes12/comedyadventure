@@ -13,6 +13,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Validate secrets
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        run: |
+          [ -n "$SSH_HOST" ] || { echo "ERROR: SSH_HOST secret is not set"; exit 1; }
+          [ -n "$SSH_USERNAME" ] || { echo "ERROR: SSH_USERNAME secret is not set"; exit 1; }
+          [ -n "$SSH_PASSWORD" ] || { echo "ERROR: SSH_PASSWORD secret is not set"; exit 1; }
+          echo "Secrets OK — connecting to: $SSH_HOST as $SSH_USERNAME"
+
       - name: Install lftp
         run: sudo apt-get install -y lftp
 
@@ -22,9 +33,8 @@ jobs:
           SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
         run: |
-          lftp -c "
-            set sftp:auto-confirm yes
-            open -u '$SSH_USERNAME','$SSH_PASSWORD' sftp://$SSH_HOST
-            mirror -R wp-content/themes/comedyadv /customers/8/8/0/comedyadventure.nl/webroots/sites/comedyadventure.nl/wp-content/themes/comedyadv
-            bye
-          "
+          echo "set sftp:auto-confirm yes" > /tmp/deploy.lftp
+          echo "open -u \"$SSH_USERNAME\",\"$SSH_PASSWORD\" sftp://$SSH_HOST" >> /tmp/deploy.lftp
+          echo "mirror -R wp-content/themes/comedyadv /customers/8/8/0/comedyadventure.nl/webroots/sites/comedyadventure.nl/wp-content/themes/comedyadv" >> /tmp/deploy.lftp
+          echo "bye" >> /tmp/deploy.lftp
+          lftp -f /tmp/deploy.lftp
