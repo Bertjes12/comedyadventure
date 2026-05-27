@@ -1,25 +1,27 @@
 name: Deploy Theme to Hostnet
+
 on:
   push:
     branches: [main]
     paths:
       - 'wp-content/themes/comedyadv/**'
   workflow_dispatch:
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup SSH key
-        run: |
-          mkdir -p ~/.ssh
-          cat << 'EOF' > ~/.ssh/id_ed25519
-          ${{ secrets.SSH_PRIVATE_KEY }}
-          EOF
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan ${{ vars.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Install lftp
+        run: sudo apt-get install -y lftp
+
       - name: Deploy via SFTP
+        env:
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
         run: |
-          sftp -i ~/.ssh/id_ed25519 -r ${{ vars.SSH_USERNAME }}@${{ vars.SSH_HOST }}:/customers/8/8/0/comedyadventure.nl/webroots/sites/comedyadventure.nl/wp-content/themes/comedyadv <<EOF
-          put -r wp-content/themes/comedyadv
-          EOF
+          lftp -u "$SSH_USERNAME","$SSH_PASSWORD" \
+            -e "set sftp:auto-confirm yes; mirror -R wp-content/themes/comedyadv /customers/8/8/0/comedyadventure.nl/webroots/sites/comedyadventure.nl/wp-content/themes/comedyadv; bye" \
+            sftp://$SSH_HOST
