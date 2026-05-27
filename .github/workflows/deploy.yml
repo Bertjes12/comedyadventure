@@ -27,17 +27,6 @@ jobs:
       - name: Install lftp
         run: sudo apt-get install -y lftp
 
-      - name: List remote directories
-        env:
-          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
-          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-        run: |
-          echo "open -u \"$SSH_USERNAME\",\"$SSH_PASSWORD\" ftp://$SSH_HOST" > /tmp/list.lftp
-          echo "cls webroots/sites/" >> /tmp/list.lftp
-          echo "bye" >> /tmp/list.lftp
-          lftp -f /tmp/list.lftp
-
       - name: Deploy via FTP
         env:
           SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
