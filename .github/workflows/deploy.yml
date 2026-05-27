@@ -13,7 +13,9 @@ jobs:
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          cat << 'EOF' > ~/.ssh/id_ed25519
+          ${{ secrets.SSH_PRIVATE_KEY }}
+          EOF
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan ${{ vars.SSH_HOST }} >> ~/.ssh/known_hosts
       - name: Deploy via SFTP
