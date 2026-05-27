@@ -10,8 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install lftp
-        run: sudo apt-get install -y lftp
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
@@ -20,4 +18,6 @@ jobs:
           ssh-keyscan ${{ vars.SSH_HOST }} >> ~/.ssh/known_hosts
       - name: Deploy via SFTP
         run: |
-          lftp -e "set sftp:connect-program 'ssh -i ~/.ssh/id_ed25519 -l ${{ vars.SSH_USERNAME }}'; set sftp:auto-confirm yes; mirror -R wp-content/themes/comedyadv /customers/8/8/0/comedyadventure.nl/webroots/sites/comedyadventure.nl/wp-content/themes/comedyadv; bye" sftp://${{ vars.SSH_HOST }}
+          sftp -i ~/.ssh/id_ed25519 -r ${{ vars.SSH_USERNAME }}@${{ vars.SSH_HOST }}:/customers/8/8/0/comedyadventure.nl/webroots/sites/comedyadventure.nl/wp-content/themes/comedyadv <<EOF
+          put -r wp-content/themes/comedyadv
+          EOF
