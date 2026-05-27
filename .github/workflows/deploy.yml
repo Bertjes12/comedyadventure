@@ -33,8 +33,7 @@ jobs:
           SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
         run: |
-          echo "set sftp:auto-confirm yes" > /tmp/deploy.lftp
-          echo "open -u \"$SSH_USERNAME\",\"$SSH_PASSWORD\" sftp://$SSH_HOST" >> /tmp/deploy.lftp
+          echo "open -u \"$SSH_USERNAME\",\"$SSH_PASSWORD\" ftp://$SSH_HOST" > /tmp/deploy.lftp
           echo "mirror -R wp-content/themes/comedyadv /customers/8/8/0/comedyadventure.nl/webroots/sites/comedyadventure.nl/wp-content/themes/comedyadv" >> /tmp/deploy.lftp
           echo "bye" >> /tmp/deploy.lftp
           lftp -f /tmp/deploy.lftp
