@@ -1,23 +1,19 @@
 name: Deploy Theme to Hostnet
-
 on:
   push:
     branches: [main]
     paths:
       - 'wp-content/themes/comedyadv/**'
   workflow_dispatch:
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Install lftp
         run: sudo apt-get install -y lftp
-
       - name: Deploy via SFTP
         run: |
-          lftp -u "${{ secrets.SSH_USERNAME }}","${{ secrets.SSH_PASSWORD }}" \
-            sftp://${{ secrets.SSH_HOST }} \
+          lftp -u "${{ vars.SSH_USERNAME }}","${{ secrets.FTP_PASSWORD }}" \
+            sftp://${{ vars.SSH_HOST }} \
             -e "mirror -R wp-content/themes/comedyadv /customers/8/8/0/comedyadventure.nl/webroots/sites/comedyadventure.nl/wp-content/themes/comedyadv; bye"
