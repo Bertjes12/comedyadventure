@@ -20,6 +20,6 @@ jobs:
           ssh-keyscan ${{ vars.SSH_HOST }} >> ~/.ssh/known_hosts
       - name: Deploy via SFTP
         run: |
-          lftp -u "${{ vars.SSH_USERNAME }}", \
+          lftp -u "${{ vars.SSH_USERNAME }}" \
             sftp://${{ vars.SSH_HOST }} \
-            -e "set sftp:connect-program 'ssh -i ~/.ssh/id_ed25519'; se
+            -e "set sftp:connect-program 'ssh -i ~/.ssh/id_ed25519'; set sftp:auto-confirm yes; mirror -R wp-content/themes/comedyadv /customers/8/8/0/comedyadventure.nl/webroots/sites/comedyadventure.nl/wp-content/themes/comedyadv; bye"
