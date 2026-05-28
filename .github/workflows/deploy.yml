@@ -34,7 +34,7 @@ jobs:
           SSH_HOST: ${{ secrets.SSH_HOST }}
         run: |
           echo "open -u \"$SSH_USERNAME\",\"$SSH_PASSWORD\" ftp://$SSH_HOST" > /tmp/deploy.lftp
-          echo "cd webroots/sites/comedyadventure.nl/wp-content/themes" >> /tmp/deploy.lftp
+          echo "cd webroots/sites/museuminamsterdam.nl/wp-content/themes" >> /tmp/deploy.lftp
           echo "mirror -R wp-content/themes/comedyadv" >> /tmp/deploy.lftp
           echo "bye" >> /tmp/deploy.lftp
           lftp -f /tmp/deploy.lftp
