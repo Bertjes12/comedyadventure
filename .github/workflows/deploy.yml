@@ -33,10 +33,12 @@ jobs:
           SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
         run: |
-          lftp -u "$SSH_USERNAME","$SSH_PASSWORD" ftp://$SSH_HOST << 'EOF'
+          lftp -u "$SSH_USERNAME","$SSH_PASSWORD" ftps://$SSH_HOST << 'EOF'
           set ftp:ssl-allow yes
-          set ftp:ssl-force no
+          set ftp:ssl-force yes
+          set ssl:verify-certificate no
           set net:timeout 30
           set net:max-retries 3
+          set ftp:passive-mode yes
           ls
           EOF
