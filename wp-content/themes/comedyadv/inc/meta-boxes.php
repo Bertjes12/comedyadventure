@@ -10,6 +10,76 @@ if ( ! defined( 'ABSPATH' ) ) {
 const COMEDYADV_NONCE = 'comedyadv_meta_nonce';
 
 /**
+ * Enqueue media uploader scripts on locatie edit screens.
+ */
+function comedyadv_enqueue_media_scripts( $hook ) {
+	if ( ! in_array( $hook, array( 'post.php', 'post-new.php' ), true ) ) {
+		return;
+	}
+	$screen = get_current_screen();
+	if ( $screen && 'locatie' === $screen->post_type ) {
+		wp_enqueue_media();
+		wp_add_inline_script( 'jquery-core', "
+jQuery(function($){
+	$(document).on('click', '.comedyadv-img-upload', function(e){
+		e.preventDefault();
+		var btn     = $(this);
+		var wrap    = btn.closest('.comedyadv-img-field');
+		var input   = wrap.find('.comedyadv-img-id');
+		var preview = wrap.find('.comedyadv-img-preview');
+		var remove  = wrap.find('.comedyadv-img-remove');
+		var frame = wp.media({ title: 'Kies een afbeelding', button:{ text:'Gebruik afbeelding' }, multiple:false });
+		frame.on('select', function(){
+			var att = frame.state().get('selection').first().toJSON();
+			input.val(att.id);
+			preview.attr('src', att.sizes && att.sizes.medium ? att.sizes.medium.url : att.url).show();
+			remove.show();
+			btn.text('Wijzig afbeelding');
+		});
+		frame.open();
+	});
+	$(document).on('click', '.comedyadv-img-remove', function(e){
+		e.preventDefault();
+		var wrap = $(this).closest('.comedyadv-img-field');
+		wrap.find('.comedyadv-img-id').val('');
+		wrap.find('.comedyadv-img-preview').hide().attr('src','');
+		$(this).hide();
+		wrap.find('.comedyadv-img-upload').text('Afbeelding kiezen');
+	});
+});
+		" );
+	}
+}
+add_action( 'admin_enqueue_scripts', 'comedyadv_enqueue_media_scripts' );
+
+/**
+ * Render an image-picker field backed by the media library.
+ */
+function comedyadv_field_image( $post_id, $key, $label ) {
+	$att_id = (int) get_post_meta( $post_id, $key, true );
+	$src    = '';
+	if ( $att_id ) {
+		$img = wp_get_attachment_image_src( $att_id, 'medium' );
+		if ( $img ) {
+			$src = $img[0];
+		}
+	}
+	?>
+	<p><label style="display:block;font-weight:600;margin-bottom:6px;"><?php echo esc_html( $label ); ?></label></p>
+	<div class="comedyadv-img-field" style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+		<input type="hidden" name="<?php echo esc_attr( $key ); ?>" class="comedyadv-img-id" value="<?php echo esc_attr( $att_id ?: '' ); ?>" />
+		<?php if ( $src ) : ?>
+			<img class="comedyadv-img-preview" src="<?php echo esc_url( $src ); ?>" style="width:80px;height:60px;object-fit:cover;border-radius:6px;border:1px solid #ddd;" />
+		<?php else : ?>
+			<img class="comedyadv-img-preview" src="" style="width:80px;height:60px;object-fit:cover;border-radius:6px;border:1px solid #ddd;display:none;" />
+		<?php endif; ?>
+		<button type="button" class="button comedyadv-img-upload"><?php echo $src ? 'Wijzig afbeelding' : 'Afbeelding kiezen'; ?></button>
+		<button type="button" class="button-link-delete comedyadv-img-remove" style="<?php echo $src ? '' : 'display:none;'; ?>">Verwijderen</button>
+	</div>
+	<?php
+}
+
+/**
  * Register meta boxes.
  */
 function comedyadv_register_meta_boxes() {
@@ -18,6 +88,7 @@ function comedyadv_register_meta_boxes() {
 	add_meta_box( 'comedyadv_workshop', 'Workshop-gegevens', 'comedyadv_render_workshop_box', 'workshop', 'normal', 'high' );
 	add_meta_box( 'comedyadv_locatie',  'Locatie-gegevens',  'comedyadv_render_locatie_box',  'locatie',  'normal', 'high' );
 	add_meta_box( 'comedyadv_aanbod',   'Aanbod-gegevens',   'comedyadv_render_aanbod_box',   'aanbod',   'normal', 'high' );
+	add_meta_box( 'comedyadv_reviews',  'Reviews',           'comedyadv_render_reviews_box',  'page',     'normal', 'low' );
 }
 add_action( 'add_meta_boxes', 'comedyadv_register_meta_boxes' );
 
@@ -56,12 +127,67 @@ function comedyadv_render_show_box( $post ) {
 
 	comedyadv_field_text( $post->ID, '_comedyadv_show_date', 'Datum (YYYY-MM-DD)', '2026-05-12' );
 	comedyadv_field_text( $post->ID, '_comedyadv_show_time', 'Tijd', '19:00' );
+	comedyadv_field_text( $post->ID, '_comedyadv_show_doors', 'Deuren open', '18:30' );
 	comedyadv_field_text( $post->ID, '_comedyadv_show_duration', 'Tijdsduur', '3,5 uur' );
-	comedyadv_field_text( $post->ID, '_comedyadv_show_price', 'Prijs', 'Vanaf €49,50' );
+	comedyadv_field_text( $post->ID, '_comedyadv_show_price', 'Prijs', '€49,50' );
+	comedyadv_field_textarea( $post->ID, '_comedyadv_show_inclusive', 'Inclusief (één item per regel)', 4 );
 	comedyadv_field_text( $post->ID, '_comedyadv_show_location', 'Locatie (zaal/venue)', 'Café De Centrale, Vondelpark' );
+	comedyadv_field_text( $post->ID, '_comedyadv_show_venue_url', 'Link naar de locatie (URL)', 'https://...' );
+	comedyadv_field_text( $post->ID, '_comedyadv_show_address_line1', 'Straat + huisnummer', 'bv. Veembroederhof 100' );
+	comedyadv_field_text( $post->ID, '_comedyadv_show_address_line2', 'Postcode + stad', 'bv. 1019 HC Amsterdam' );
 	comedyadv_field_text( $post->ID, '_comedyadv_show_eyebrow', 'Eyebrow (op stadspagina)', 'Live in Amsterdam' );
 	comedyadv_field_textarea( $post->ID, '_comedyadv_show_lead', 'Korte lead (1-2 zinnen)' );
 	comedyadv_field_text( $post->ID, '_comedyadv_image_url', 'Afbeelding URL (optioneel — anders Featured Image)', 'https://...' );
+
+	echo '<hr><h4 style="margin:16px 0 8px;">Menu (optioneel — alleen invullen bij diner-shows)</h4>';
+	echo '<p class="description" style="margin-bottom:8px;">Laat gangen leeg om geen menu te tonen op de pagina.</p>';
+	$menu = (array) get_post_meta( $post->ID, '_comedyadv_show_menu', true );
+	echo '<p class="description" style="margin-bottom:12px;">Voer per gang de gerechten in — één gerecht per regel.</p>';
+	for ( $i = 0; $i < 6; $i++ ) {
+		$name  = isset( $menu[ $i ]['name'] ) ? esc_attr( $menu[ $i ]['name'] ) : '';
+		$items = isset( $menu[ $i ]['items'] ) ? esc_textarea( $menu[ $i ]['items'] ) : '';
+		printf(
+			'<div style="margin-bottom:16px;padding:12px;background:#f9f9f9;border:1px solid #e5e5e5;border-radius:4px;">
+				<input type="text" name="_comedyadv_show_menu[%1$d][name]" value="%2$s" placeholder="Gangnaam — bv. Voorgerecht" style="width:100%%;font-weight:600;margin-bottom:6px;" />
+				<textarea name="_comedyadv_show_menu[%1$d][items]" rows="3" placeholder="Één gerecht per regel&#10;bv. Huisgemaakte tomatensoep&#10;Salade met geitenkaas" style="width:100%%;margin-top:4px;">%3$s</textarea>
+			</div>',
+			$i, $name, $items
+		);
+	}
+
+	// Verloop van de avond.
+	echo '<hr><h4 style="margin:16px 0 8px;">Verloop van de avond (optioneel)</h4>';
+	echo '<p class="description" style="margin-bottom:12px;">Vul het tijdschema in — laat leeg om het blok te verbergen.</p>';
+	$schedule = (array) get_post_meta( $post->ID, '_comedyadv_show_schedule', true );
+	for ( $i = 0; $i < 8; $i++ ) :
+		$time  = isset( $schedule[ $i ]['time'] )  ? esc_attr( $schedule[ $i ]['time'] )  : '';
+		$title = isset( $schedule[ $i ]['title'] ) ? esc_attr( $schedule[ $i ]['title'] ) : '';
+		$desc  = isset( $schedule[ $i ]['desc'] )  ? esc_attr( $schedule[ $i ]['desc'] )  : '';
+		printf(
+			'<div style="display:flex;gap:8px;margin-bottom:8px;align-items:flex-start;">
+				<input type="text" name="_comedyadv_show_schedule[%1$d][time]"  value="%2$s" placeholder="18:30" style="width:70px;flex-shrink:0;" />
+				<input type="text" name="_comedyadv_show_schedule[%1$d][title]" value="%3$s" placeholder="Deuren open" style="flex:1;" />
+				<input type="text" name="_comedyadv_show_schedule[%1$d][desc]"  value="%4$s" placeholder="Omschrijving (optioneel)" style="flex:1;" />
+			</div>',
+			$i, $time, $title, $desc
+		);
+	endfor;
+
+	// FAQ.
+	echo '<hr><h4 style="margin:16px 0 8px;">Veelgestelde vragen (optioneel)</h4>';
+	echo '<p class="description" style="margin-bottom:12px;">Laat leeg om het FAQ-blok te verbergen.</p>';
+	$faq = (array) get_post_meta( $post->ID, '_comedyadv_show_faq', true );
+	for ( $i = 0; $i < 6; $i++ ) :
+		$q = isset( $faq[ $i ]['q'] ) ? esc_attr( $faq[ $i ]['q'] ) : '';
+		$a = isset( $faq[ $i ]['a'] ) ? esc_textarea( $faq[ $i ]['a'] ) : '';
+		printf(
+			'<div style="margin-bottom:12px;padding:12px;background:#f9f9f9;border:1px solid #e5e5e5;border-radius:4px;">
+				<input type="text" name="_comedyadv_show_faq[%1$d][q]" value="%2$s" placeholder="Vraag — bv. Is er parkeergelegenheid?" style="width:100%%;font-weight:600;margin-bottom:6px;" />
+				<textarea name="_comedyadv_show_faq[%1$d][a]" rows="2" placeholder="Antwoord" style="width:100%%;">%3$s</textarea>
+			</div>',
+			$i, $q, $a
+		);
+	endfor;
 
 	// Locatie relationship.
 	$current  = (int) get_post_meta( $post->ID, '_comedyadv_show_city', true );
@@ -141,11 +267,32 @@ function comedyadv_render_aanbod_box( $post ) {
 
 function comedyadv_render_locatie_box( $post ) {
 	wp_nonce_field( COMEDYADV_NONCE, COMEDYADV_NONCE );
-	echo '<p class="description">Stadnaam = post-titel. Achtergrondafbeelding op het /locaties/ archief = de <strong>Featured Image</strong> rechtsboven. Hoofd-content optioneel.</p>';
+	echo '<p class="description">Stadnaam = post-titel. Hoofdfoto (groot links) = de <strong>Featured Image</strong> rechtsboven. Hoofd-content optioneel.</p>';
 
 	comedyadv_field_text( $post->ID, '_comedyadv_city_title_html', 'Hero-titel (HTML)', 'Comedyshow in <span>Amsterdam</span>' );
 	comedyadv_field_textarea( $post->ID, '_comedyadv_city_lead', 'Hero lead' );
 	comedyadv_field_textarea( $post->ID, '_comedyadv_city_occ_lead', 'Lead onder "Voor welke gelegenheden?"' );
+
+	echo '<hr><h4 style="margin:16px 0 8px;">Fotogalerij — 4 kleine foto\'s rechts</h4>';
+	for ( $i = 1; $i <= 4; $i++ ) {
+		comedyadv_field_image( $post->ID, '_comedyadv_gallery_' . $i, 'Foto ' . $i );
+	}
+
+	// Reviews.
+	echo '<hr><h4 style="margin:16px 0 8px;">Reviews (optioneel — max 3)</h4>';
+	echo '<p class="description" style="margin-bottom:12px;">Laat leeg om het reviews-blok te verbergen.</p>';
+	$reviews = (array) get_post_meta( $post->ID, '_comedyadv_locatie_reviews', true );
+	for ( $i = 0; $i < 3; $i++ ) :
+		$text   = isset( $reviews[ $i ]['text'] )   ? esc_textarea( $reviews[ $i ]['text'] )   : '';
+		$author = isset( $reviews[ $i ]['author'] ) ? esc_attr( $reviews[ $i ]['author'] )     : '';
+		printf(
+			'<div style="margin-bottom:14px;padding:12px;background:#f9f9f9;border:1px solid #e5e5e5;border-radius:4px;">
+				<textarea name="_comedyadv_locatie_reviews[%1$d][text]" rows="2" placeholder="Reviewtekst..." style="width:100%%;margin-bottom:6px;">%2$s</textarea>
+				<input type="text" name="_comedyadv_locatie_reviews[%1$d][author]" value="%3$s" placeholder="Naam — functie/bedrijf" style="width:100%%;" />
+			</div>',
+			$i, $text, $author
+		);
+	endfor;
 
 	// Featured show relationship.
 	$shows    = get_posts( array( 'post_type' => 'show', 'posts_per_page' => -1, 'orderby' => 'meta_value', 'meta_key' => '_comedyadv_show_date', 'order' => 'ASC' ) );
@@ -162,6 +309,23 @@ function comedyadv_render_locatie_box( $post ) {
 		);
 	}
 	echo '</select></p>';
+}
+
+function comedyadv_render_reviews_box( $post ) {
+	wp_nonce_field( COMEDYADV_NONCE, COMEDYADV_NONCE );
+	echo '<p class="description" style="margin-bottom:12px;">Laat leeg om het reviews-blok te verbergen op deze pagina.</p>';
+	$reviews = (array) get_post_meta( $post->ID, '_comedyadv_page_reviews', true );
+	for ( $i = 0; $i < 3; $i++ ) :
+		$text   = isset( $reviews[ $i ]['text'] )   ? esc_textarea( $reviews[ $i ]['text'] )   : '';
+		$author = isset( $reviews[ $i ]['author'] ) ? esc_attr( $reviews[ $i ]['author'] )     : '';
+		printf(
+			'<div style="margin-bottom:14px;padding:12px;background:#f9f9f9;border:1px solid #e5e5e5;border-radius:4px;">
+				<textarea name="_comedyadv_page_reviews[%1$d][text]" rows="2" placeholder="Reviewtekst..." style="width:100%%;margin-bottom:6px;">%2$s</textarea>
+				<input type="text" name="_comedyadv_page_reviews[%1$d][author]" value="%3$s" placeholder="Naam — functie/bedrijf" style="width:100%%;" />
+			</div>',
+			$i, $text, $author
+		);
+	endfor;
 }
 
 /**
@@ -195,13 +359,58 @@ function comedyadv_save_post( $post_id ) {
 
 		case 'show':
 			$text_keys = array(
-				'_comedyadv_show_date', '_comedyadv_show_time', '_comedyadv_show_duration',
-				'_comedyadv_show_price', '_comedyadv_show_location', '_comedyadv_show_eyebrow',
+				'_comedyadv_show_date', '_comedyadv_show_time', '_comedyadv_show_doors',
+				'_comedyadv_show_duration', '_comedyadv_show_price',
+				'_comedyadv_show_location', '_comedyadv_show_venue_url', '_comedyadv_show_eyebrow',
+				'_comedyadv_show_address_line1', '_comedyadv_show_address_line2',
 				'_comedyadv_image_url',
 			);
-			$textarea_keys = array( '_comedyadv_show_lead' );
+			$textarea_keys = array( '_comedyadv_show_lead', '_comedyadv_show_inclusive' );
 			$select_keys   = array( '_comedyadv_show_city' );
 			$multi_keys    = array( '_comedyadv_show_comedians' );
+			// Menu opslaan.
+			if ( isset( $_POST['_comedyadv_show_menu'] ) && is_array( $_POST['_comedyadv_show_menu'] ) ) {
+				$courses = array();
+				foreach ( $_POST['_comedyadv_show_menu'] as $row ) {
+					$name  = sanitize_text_field( wp_unslash( $row['name'] ?? '' ) );
+					$items = sanitize_textarea_field( wp_unslash( $row['items'] ?? '' ) );
+					if ( '' !== $name ) {
+						$courses[] = array( 'name' => $name, 'items' => $items );
+					}
+				}
+				update_post_meta( $post_id, '_comedyadv_show_menu', $courses );
+			} else {
+				update_post_meta( $post_id, '_comedyadv_show_menu', array() );
+			}
+			// FAQ opslaan.
+			if ( isset( $_POST['_comedyadv_show_faq'] ) && is_array( $_POST['_comedyadv_show_faq'] ) ) {
+				$faqs = array();
+				foreach ( $_POST['_comedyadv_show_faq'] as $row ) {
+					$q = sanitize_text_field( wp_unslash( $row['q'] ?? '' ) );
+					$a = sanitize_textarea_field( wp_unslash( $row['a'] ?? '' ) );
+					if ( '' !== $q ) {
+						$faqs[] = array( 'q' => $q, 'a' => $a );
+					}
+				}
+				update_post_meta( $post_id, '_comedyadv_show_faq', $faqs );
+			} else {
+				update_post_meta( $post_id, '_comedyadv_show_faq', array() );
+			}
+			// Schema opslaan.
+			if ( isset( $_POST['_comedyadv_show_schedule'] ) && is_array( $_POST['_comedyadv_show_schedule'] ) ) {
+				$steps = array();
+				foreach ( $_POST['_comedyadv_show_schedule'] as $row ) {
+					$time  = sanitize_text_field( wp_unslash( $row['time']  ?? '' ) );
+					$title = sanitize_text_field( wp_unslash( $row['title'] ?? '' ) );
+					$desc  = sanitize_text_field( wp_unslash( $row['desc']  ?? '' ) );
+					if ( '' !== $time || '' !== $title ) {
+						$steps[] = array( 'time' => $time, 'title' => $title, 'desc' => $desc );
+					}
+				}
+				update_post_meta( $post_id, '_comedyadv_show_schedule', $steps );
+			} else {
+				update_post_meta( $post_id, '_comedyadv_show_schedule', array() );
+			}
 			break;
 
 		case 'workshop':
@@ -218,7 +427,21 @@ function comedyadv_save_post( $post_id ) {
 		case 'locatie':
 			$text_keys     = array( '_comedyadv_city_title_html' );
 			$textarea_keys = array( '_comedyadv_city_lead', '_comedyadv_city_occ_lead' );
-			$select_keys   = array( '_comedyadv_featured_show' );
+			$select_keys   = array( '_comedyadv_featured_show', '_comedyadv_gallery_1', '_comedyadv_gallery_2', '_comedyadv_gallery_3', '_comedyadv_gallery_4' );
+			// Reviews opslaan.
+			if ( isset( $_POST['_comedyadv_locatie_reviews'] ) && is_array( $_POST['_comedyadv_locatie_reviews'] ) ) {
+				$reviews = array();
+				foreach ( $_POST['_comedyadv_locatie_reviews'] as $row ) {
+					$text   = sanitize_textarea_field( wp_unslash( $row['text']   ?? '' ) );
+					$author = sanitize_text_field( wp_unslash( $row['author'] ?? '' ) );
+					if ( '' !== $text ) {
+						$reviews[] = array( 'text' => $text, 'author' => $author );
+					}
+				}
+				update_post_meta( $post_id, '_comedyadv_locatie_reviews', $reviews );
+			} else {
+				update_post_meta( $post_id, '_comedyadv_locatie_reviews', array() );
+			}
 			break;
 
 		case 'aanbod':
@@ -229,6 +452,22 @@ function comedyadv_save_post( $post_id ) {
 				'_comedyadv_aanbod_card_extra',
 			);
 			$textarea_keys = array( '_comedyadv_aanbod_lead' );
+			break;
+
+		case 'page':
+			if ( isset( $_POST['_comedyadv_page_reviews'] ) && is_array( $_POST['_comedyadv_page_reviews'] ) ) {
+				$reviews = array();
+				foreach ( $_POST['_comedyadv_page_reviews'] as $row ) {
+					$text   = sanitize_textarea_field( wp_unslash( $row['text']   ?? '' ) );
+					$author = sanitize_text_field( wp_unslash( $row['author'] ?? '' ) );
+					if ( '' !== $text ) {
+						$reviews[] = array( 'text' => $text, 'author' => $author );
+					}
+				}
+				update_post_meta( $post_id, '_comedyadv_page_reviews', $reviews );
+			} else {
+				update_post_meta( $post_id, '_comedyadv_page_reviews', array() );
+			}
 			break;
 	}
 

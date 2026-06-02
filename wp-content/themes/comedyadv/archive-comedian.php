@@ -1,6 +1,6 @@
 <?php
 /**
- * Archive: Comedians.
+ * Archive: Comedians — Gen Z Roster redesign.
  */
 get_header();
 
@@ -8,53 +8,74 @@ $contact_url = comedyadv_url( 'contact' );
 $home_url    = home_url( '/' );
 ?>
 
-<section class="page-hero">
-	<div class="container page-hero__inner">
-		<div class="page-hero__breadcrumbs"><?php echo comedyadv_breadcrumbs( array( array( 'Home', $home_url ), 'Comedians' ) ); ?></div>
-		<h1 class="page-hero__title">Onze <span>comedians</span></h1>
-		<p class="page-hero__lead">Een netwerk van Nederlandse topcomedians, klaar om jouw evenement onvergetelijk te maken. Van scherpe observatiehumor tot interactieve roasts &mdash; wij matchen de juiste comedian aan jouw publiek.</p>
+<!-- BREADCRUMBS -->
+<div class="workshop-breadcrumbs">
+	<div class="container">
+		<?php echo comedyadv_breadcrumbs( array( array( 'Home', $home_url ), 'Comedians' ) ); ?>
 	</div>
-</section>
+</div>
 
-<section class="section">
+<!-- HERO -->
+<div class="comedians-hero">
+	<div class="container comedians-hero__inner">
+		<div class="comedians-hero__body">
+			<span class="workshop-hero__tag">🎤 Het roster</span>
+			<h1 class="comedians-hero__title">Onze<br><span>comedians</span></h1>
+			<p class="comedians-hero__lead">Nederlandse topcomedians klaar om jouw evenement onvergetelijk te maken. Van observatiehumor tot interactieve roasts.</p>
+		</div>
+		<div class="comedians-hero__deco">
+			<span>HA</span>
+			<span>HA</span>
+			<span>HA</span>
+		</div>
+	</div>
+</div>
+
+<!-- COMEDIAN CARDS -->
+<div class="comedians-grid-section">
 	<div class="container">
 		<?php if ( have_posts() ) : ?>
-			<div class="card-grid">
-				<?php while ( have_posts() ) : the_post();
-					$tag       = comedyadv_meta( get_the_ID(), '_comedyadv_tag' );
-					$image_url = comedyadv_image_url( get_the_ID(), 'medium_large' );
-					$first     = explode( ' ', get_the_title() )[0];
-				?>
-					<a class="card reveal" href="<?php the_permalink(); ?>">
-						<div class="card__media">
-							<?php if ( $image_url ) : ?>
-								<img src="<?php echo esc_url( $image_url ); ?>" alt="Comedian <?php the_title_attribute(); ?>" />
-							<?php endif; ?>
-						</div>
-						<div class="card__body">
-							<?php if ( $tag ) : ?>
-								<span class="card__tag"><?php echo esc_html( $tag ); ?></span>
-							<?php endif; ?>
-							<h3 class="card__title"><?php the_title(); ?></h3>
-							<p class="card__text"><?php echo wp_trim_words( wp_strip_all_tags( get_the_content() ), 28, '...' ); ?></p>
-							<span class="card__link">Boek <?php echo esc_html( $first ); ?></span>
-						</div>
-					</a>
-				<?php endwhile; ?>
-			</div>
+		<div class="comedians-grid">
+			<?php while ( have_posts() ) : the_post();
+				$id        = get_the_ID();
+				$tag       = comedyadv_meta( $id, '_comedyadv_tag' );
+				$image_url = comedyadv_image_url( $id, 'large' );
+				$first     = explode( ' ', get_the_title() )[0];
+			?>
+			<a class="comedian-card reveal" href="<?php the_permalink(); ?>">
+				<div class="comedian-card__photo">
+					<?php if ( $image_url ) : ?>
+						<img src="<?php echo esc_url( $image_url ); ?>" alt="<?php the_title_attribute(); ?>" />
+					<?php endif; ?>
+					<div class="comedian-card__overlay"></div>
+				</div>
+				<div class="comedian-card__body">
+					<?php if ( $tag ) : ?>
+						<span class="comedian-card__tag"><?php echo esc_html( $tag ); ?></span>
+					<?php endif; ?>
+					<h3 class="comedian-card__name"><?php the_title(); ?></h3>
+					<span class="comedian-card__cta">Boek <?php echo esc_html( $first ); ?> →</span>
+				</div>
+			</a>
+			<?php endwhile; ?>
+		</div>
 		<?php else : ?>
 			<p>Nog geen comedians toegevoegd.</p>
 		<?php endif; ?>
 	</div>
-</section>
+</div>
 
-<section class="section section--grey">
-	<div class="container">
-		<div class="cta-banner">
-			<h2>Niet zeker welke comedian past?</h2>
-			<p>Geen probleem. Vertel ons over je evenement en we adviseren de perfecte match.</p>
-			<a href="<?php echo esc_url( $contact_url ); ?>" class="btn btn--dark">Vraag advies aan <span class="btn__arrow">&rarr;</span></a>
+<!-- CTA -->
+<section class="comedians-cta">
+	<div class="container comedians-cta__inner">
+		<div>
+			<span class="section-head__eyebrow">Niet zeker wie past?</span>
+			<h2>Wij matchen de<br><span>perfecte comedian.</span></h2>
+			<p>Vertel ons over je evenement en we adviseren de beste match voor jouw publiek.</p>
 		</div>
+		<a href="<?php echo esc_url( $contact_url ); ?>" class="btn btn--primary comedians-cta__btn">
+			Vraag advies aan <span class="btn__arrow">&rarr;</span>
+		</a>
 	</div>
 </section>
 

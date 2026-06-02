@@ -248,6 +248,16 @@ function comedyadv_demo_locaties() {
 				'_comedyadv_city_occ_lead'   => 'Van bedrijfsdiners aan de Grote Markt tot besloten feesten op locatie — wij brengen comedy die past bij Haarlems goede smaak.',
 			),
 		),
+		array(
+			'slug'      => 'comedy-diner-ouderkerk-aan-de-amstel',
+			'title'     => 'Comedy Diner Ouderkerk aan de Amstel',
+			'image_url' => 'https://picsum.photos/seed/ouderkerk/800/1000',
+			'meta'      => array(
+				'_comedyadv_city_title_html' => 'Comedy Diner in <span>Ouderkerk aan de Amstel</span>',
+				'_comedyadv_city_lead'       => 'Vul hier de intro in via Admin → Locaties → Comedy Diner Ouderkerk aan de Amstel.',
+				'_comedyadv_city_occ_lead'   => 'Vul hier de gelegenheden-tekst in via Admin → Locaties → Comedy Diner Ouderkerk aan de Amstel.',
+			),
+		),
 	);
 }
 

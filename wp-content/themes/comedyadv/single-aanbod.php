@@ -1,6 +1,6 @@
 <?php
 /**
- * Single aanbod (activity) page.
+ * Single aanbod page — Gen Z redesign (zelfde stijl als workshop).
  */
 get_header();
 
@@ -17,78 +17,98 @@ while ( have_posts() ) : the_post();
 	$min      = comedyadv_meta( $id, '_comedyadv_aanbod_min_personen' );
 ?>
 
-<section class="page-hero">
-	<div class="container page-hero__inner">
-		<div class="page-hero__breadcrumbs"><?php echo comedyadv_breadcrumbs( array( array( 'Home', $home_url ), array( 'Aanbod', $archive_url ), get_the_title() ) ); ?></div>
-		<h1 class="page-hero__title"><?php the_title(); ?></h1>
-		<?php if ( $lead ) : ?>
-			<p class="page-hero__lead"><?php echo esc_html( $lead ); ?></p>
-		<?php endif; ?>
-	</div>
-</section>
-
-<section class="section">
+<!-- BREADCRUMBS -->
+<div class="workshop-breadcrumbs">
 	<div class="container">
-		<div class="feature-split">
+		<?php echo comedyadv_breadcrumbs( array( array( 'Home', $home_url ), array( 'Aanbod', $archive_url ), get_the_title() ) ); ?>
+	</div>
+</div>
+
+<!-- HERO: titel + foto split -->
+<div class="workshop-hero">
+	<div class="container">
+		<div class="workshop-hero__inner">
+
+			<!-- LINKS: tekst -->
+			<div class="workshop-hero__body">
+				<span class="workshop-hero__tag">Over deze activiteit</span>
+				<h1 class="workshop-hero__title"><?php the_title(); ?></h1>
+				<?php if ( $lead ) : ?>
+					<p class="workshop-hero__lead"><?php echo esc_html( $lead ); ?></p>
+				<?php endif; ?>
+				<div class="workshop-hero__content">
+					<?php the_content(); ?>
+				</div>
+				<a href="<?php echo esc_url( $contact_url ); ?>" class="btn btn--primary workshop-hero__cta">
+					Vraag offerte aan <span class="btn__arrow">&rarr;</span>
+				</a>
+			</div>
+
+			<!-- RECHTS: foto -->
 			<?php if ( $image ) : ?>
-				<div class="feature-split__media reveal">
+			<div class="workshop-hero__photo reveal">
+				<div class="workshop-hero__photo-wrap">
 					<img src="<?php echo esc_url( $image ); ?>" alt="<?php the_title_attribute(); ?>" />
 				</div>
-			<?php endif; ?>
-			<div class="reveal">
-				<span class="section-head__eyebrow">Over deze activiteit</span>
-				<h2><?php the_title(); ?></h2>
-				<?php the_content(); ?>
-				<a href="<?php echo esc_url( $contact_url ); ?>" class="btn btn--primary">Vraag offerte aan <span class="btn__arrow">&rarr;</span></a>
 			</div>
+			<?php endif; ?>
+
 		</div>
 	</div>
-</section>
+</div>
 
+<!-- SPECS -->
 <?php if ( $price_pp || $duration || $min ) : ?>
-<section class="section section--grey">
+<section class="workshop-specs">
 	<div class="container">
-		<div class="feature-split feature-split--reverse">
-			<div class="feature-split__media reveal" style="aspect-ratio:1/1;">
-				<div class="specs">
-					<?php if ( $price_pp ) : ?>
-						<div class="specs__price">
-							<div class="specs__price-label">Prijs per persoon</div>
-							<div class="specs__price-amount"><?php echo esc_html( $price_pp ); ?></div>
-						</div>
-					<?php endif; ?>
-					<?php if ( $duration || $min ) : ?>
-						<ul class="specs__list">
-							<?php if ( $duration ) : ?>
-								<li class="specs__item">
-									<span class="specs__item-label">Tijdsduur</span>
-									<span class="specs__item-value"><?php echo esc_html( $duration ); ?></span>
-								</li>
-							<?php endif; ?>
-							<?php if ( $min ) : ?>
-								<li class="specs__item">
-									<span class="specs__item-label">Minimum personen</span>
-									<span class="specs__item-value"><?php echo esc_html( $min ); ?></span>
-								</li>
-							<?php endif; ?>
-						</ul>
-					<?php endif; ?>
-					<a href="<?php echo esc_url( $contact_url ); ?>" class="btn btn--primary">Vraag offerte aan <span class="btn__arrow">&rarr;</span></a>
+		<div class="workshop-specs__inner">
+
+			<!-- Prijs + specs kaart -->
+			<div class="workshop-specs__card reveal">
+				<?php if ( $price_pp ) : ?>
+				<div class="workshop-price">
+					<span class="workshop-price__label">Prijs per persoon</span>
+					<span class="workshop-price__amount"><?php echo esc_html( $price_pp ); ?></span>
 				</div>
+				<?php endif; ?>
+				<ul class="workshop-specs__list">
+					<?php if ( $duration ) : ?>
+					<li class="workshop-specs__item">
+						<span class="workshop-specs__item-label">Tijdsduur</span>
+						<span class="workshop-specs__item-value"><?php echo esc_html( $duration ); ?></span>
+					</li>
+					<?php endif; ?>
+					<?php if ( $min ) : ?>
+					<li class="workshop-specs__item">
+						<span class="workshop-specs__item-label">Minimum personen</span>
+						<span class="workshop-specs__item-value"><?php echo esc_html( $min ); ?></span>
+					</li>
+					<?php endif; ?>
+				</ul>
+				<a href="<?php echo esc_url( $contact_url ); ?>" class="btn btn--primary" style="width:100%;justify-content:center;">
+					Vraag offerte aan <span class="btn__arrow">&rarr;</span>
+				</a>
 			</div>
-			<div class="reveal">
-				<span class="section-head__eyebrow">Praktische info</span>
-				<h2>Wat kun je verwachten?</h2>
-				<p>Hieronder vind je de praktische details voor deze activiteit. Heb je vragen of wil je een offerte op maat? Neem gerust contact met ons op.</p>
+
+			<!-- Wat kun je verwachten -->
+			<div class="workshop-learn reveal">
+				<span class="workshop-learn__eyebrow">Praktische info</span>
+				<h2 class="workshop-learn__title">Wat kun je<br>verwachten?</h2>
+				<p class="workshop-learn__closing">Heb je vragen of wil je een offerte op maat? Neem gerust contact met ons op — we reageren binnen 24 uur met een voorstel.</p>
+				<a href="<?php echo esc_url( $contact_url ); ?>" class="btn btn--primary" style="margin-top:24px;">
+					Neem contact op <span class="btn__arrow">&rarr;</span>
+				</a>
 			</div>
+
 		</div>
 	</div>
 </section>
 <?php endif; ?>
 
+<!-- CTA -->
 <section class="section">
 	<div class="container">
-		<div class="cta-banner">
+		<div class="cta-banner reveal">
 			<h2>Klaar om te boeken?</h2>
 			<p>Vraag een vrijblijvende offerte aan. Binnen 24 uur ontvang je een voorstel op maat.</p>
 			<a href="<?php echo esc_url( $contact_url ); ?>" class="btn btn--dark">Plan jouw show <span class="btn__arrow">&rarr;</span></a>
@@ -97,5 +117,4 @@ while ( have_posts() ) : the_post();
 </section>
 
 <?php endwhile; ?>
-
 <?php get_footer(); ?>

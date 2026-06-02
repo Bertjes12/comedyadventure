@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 define( 'COMEDYADV_VERSION', '1.2.0' );
-define( 'COMEDYADV_DEMO_VERSION', '1.8.0' ); // bump to trigger demo re-import on next admin load
+define( 'COMEDYADV_DEMO_VERSION', '1.9.0' ); // bump to trigger demo re-import on next admin load
 define( 'COMEDYADV_MENU_VERSION', '2' );     // bump to rebuild the primary nav menu on next admin load
 define( 'COMEDYADV_DIR', get_template_directory() );
 
@@ -37,7 +37,7 @@ add_action( 'after_setup_theme', 'comedyadv_setup' );
  * Enqueue.
  */
 function comedyadv_enqueue_assets() {
-	wp_enqueue_style( 'comedyadv-fonts', 'https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap', array(), null );
+	wp_enqueue_style( 'comedyadv-fonts', 'https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600;1,700&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&display=swap', array(), null );
 	wp_enqueue_style( 'comedyadv-styles', get_theme_file_uri( 'assets/css/styles.css' ), array( 'comedyadv-fonts' ), COMEDYADV_VERSION );
 	wp_enqueue_style( 'comedyadv-style',  get_stylesheet_uri(), array( 'comedyadv-styles' ), COMEDYADV_VERSION );
 	wp_enqueue_script( 'comedyadv-main',  get_theme_file_uri( 'assets/js/main.js' ), array(), COMEDYADV_VERSION, true );
@@ -155,6 +155,68 @@ function comedyadv_ensure_image_migrations() {
 	}
 }
 add_action( 'admin_init', 'comedyadv_ensure_image_migrations', 99 );
+
+/**
+ * One-time: seed locatie + placeholder show for Ouderkerk aan de Amstel.
+ */
+function comedyadv_seed_ouderkerk_locatie() {
+	if ( get_option( 'comedyadv_ouderkerk_seeded_v2' ) ) {
+		return;
+	}
+
+	// Create or find the locatie post.
+	$loc = get_page_by_path( 'comedy-diner-ouderkerk-aan-de-amstel', OBJECT, 'locatie' );
+	if ( ! $loc ) {
+		$loc_id = wp_insert_post( array(
+			'post_title'  => 'Comedy Diner Ouderkerk aan de Amstel',
+			'post_name'   => 'comedy-diner-ouderkerk-aan-de-amstel',
+			'post_status' => 'publish',
+			'post_type'   => 'locatie',
+		) );
+	} else {
+		$loc_id = $loc->ID;
+	}
+	if ( ! $loc_id || is_wp_error( $loc_id ) ) {
+		return;
+	}
+
+	// Set locatie meta.
+	update_post_meta( $loc_id, '_comedyadv_city_title_html', 'Comedy Diner in <span>Ouderkerk aan de Amstel</span>' );
+	if ( ! get_post_meta( $loc_id, '_comedyadv_city_lead', true ) ) {
+		update_post_meta( $loc_id, '_comedyadv_city_lead', 'Vul hier de intro-tekst in via Admin → Locaties.' );
+	}
+	if ( ! get_post_meta( $loc_id, '_comedyadv_city_occ_lead', true ) ) {
+		update_post_meta( $loc_id, '_comedyadv_city_occ_lead', 'Vul hier de gelegenheden-tekst in via Admin → Locaties.' );
+	}
+
+	// Create or find a placeholder show linked to this locatie.
+	$show = get_page_by_path( 'comedy-diner-ouderkerk-placeholder', OBJECT, 'show' );
+	if ( ! $show ) {
+		$show_id = wp_insert_post( array(
+			'post_title'   => 'Comedy Diner — Ouderkerk aan de Amstel',
+			'post_name'    => 'comedy-diner-ouderkerk-placeholder',
+			'post_status'  => 'publish',
+			'post_type'    => 'show',
+			'post_content' => 'Vul hier de showbeschrijving in.',
+		) );
+	} else {
+		$show_id = $show->ID;
+	}
+	if ( $show_id && ! is_wp_error( $show_id ) ) {
+		update_post_meta( $show_id, '_comedyadv_show_date',     '2026-12-31' );
+		update_post_meta( $show_id, '_comedyadv_show_time',     '19:00' );
+		update_post_meta( $show_id, '_comedyadv_show_duration', 'Vul in' );
+		update_post_meta( $show_id, '_comedyadv_show_price',    'Op aanvraag' );
+		update_post_meta( $show_id, '_comedyadv_show_location', 'Ouderkerk aan de Amstel' );
+		update_post_meta( $show_id, '_comedyadv_show_eyebrow',  'Live in Ouderkerk aan de Amstel' );
+		update_post_meta( $show_id, '_comedyadv_show_lead',     'Vul hier de show-omschrijving in via Admin → Shows.' );
+		update_post_meta( $show_id, '_comedyadv_show_city',     $loc_id );
+		update_post_meta( $loc_id,  '_comedyadv_featured_show', $show_id );
+	}
+
+	update_option( 'comedyadv_ouderkerk_seeded_v2', '1' );
+}
+add_action( 'init', 'comedyadv_seed_ouderkerk_locatie', 20 );
 
 /**
  * Rebuild the primary nav menu when its version changes. Bump COMEDYADV_MENU_VERSION
@@ -316,8 +378,7 @@ function comedyadv_primary_nav_fallback() {
 		}
 		printf( '<li><a class="%1$s" href="%2$s">%3$s</a></li>', esc_attr( $class ), esc_url( $item['url'] ), esc_html( $item['label'] ) );
 	}
-	$contact_url = comedyadv_url( 'contact' );
-	printf( '<li><a class="nav__link nav__cta" href="%1$s">Boek een show</a></li>', esc_url( $contact_url ) );
+	printf( '<li><a class="nav__link nav__cta" href="%1$s">Boek een show</a></li>', esc_url( home_url( '/boeken/' ) ) );
 	echo '</ul>';
 }
 
@@ -331,13 +392,15 @@ class Comedyadv_Nav_Walker extends Walker_Nav_Menu {
 	public function start_el( &$output, $item, $depth = 0, $args = null, $id = 0 ) {
 		$classes  = array( 'nav__link' );
 		$item_cls = empty( $item->classes ) ? array() : (array) $item->classes;
-		if ( in_array( 'nav__cta-item', $item_cls, true ) ) {
+		$is_cta = in_array( 'nav__cta-item', $item_cls, true );
+		if ( $is_cta ) {
 			$classes[] = 'nav__cta';
 		}
 		if ( in_array( 'current-menu-item', $item_cls, true ) || in_array( 'current_page_item', $item_cls, true ) ) {
 			$classes[] = 'is-active';
 		}
-		$attrs = sprintf( ' href="%s" class="%s"', esc_url( $item->url ), esc_attr( implode( ' ', $classes ) ) );
+		$url   = $is_cta ? home_url( '/boeken/' ) : $item->url;
+		$attrs = sprintf( ' href="%s" class="%s"', esc_url( $url ), esc_attr( implode( ' ', $classes ) ) );
 		$output .= '<li>';
 		$output .= '<a' . $attrs . '>' . esc_html( $item->title ) . '</a>';
 	}

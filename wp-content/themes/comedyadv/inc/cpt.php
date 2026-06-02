@@ -115,6 +115,13 @@ function comedyadv_register_cpts() {
 add_action( 'init', 'comedyadv_register_cpts' );
 
 /**
+ * Shows are data-only — use the Classic Editor so all meta fields are visible without scrolling.
+ */
+add_filter( 'use_block_editor_for_post_type', function( $use, $post_type ) {
+	return ( 'show' === $post_type ) ? false : $use;
+}, 10, 2 );
+
+/**
  * Order archive queries.
  */
 function comedyadv_archive_order( $query ) {
