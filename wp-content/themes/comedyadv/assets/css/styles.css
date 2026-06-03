@@ -4444,6 +4444,15 @@ a.contact-info__value:hover { color: #FF5500; }
   flex-direction: column;
   gap: 20px;
 }
+@media (max-width: 860px) {
+  .single-locatie .event-main__inner {
+    flex-direction: column;
+  }
+  .single-locatie .event-main__sidebar {
+    width: 100%;
+    position: static;
+  }
+}
 
 /* ── Ticket kaart (rechter kolom) ── */
 .single-locatie .event-ticket-card {
