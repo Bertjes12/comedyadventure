@@ -1,4 +1,4 @@
-name: Deploy Theme to Hostnet
+name: Deploy Theme to museuminamsterdam.nl
 
 on:
   push:
@@ -15,30 +15,39 @@ jobs:
 
       - name: Validate secrets
         env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
-          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+          FTP_HOST: ${{ secrets.SSH_HOST }}
+          FTP_USER: ${{ secrets.SSH_USERNAME }}
+          FTP_PASS: ${{ secrets.SSH_PASSWORD }}
         run: |
-          [ -n "$SSH_HOST" ] || { echo "ERROR: SSH_HOST secret is not set"; exit 1; }
-          [ -n "$SSH_USERNAME" ] || { echo "ERROR: SSH_USERNAME secret is not set"; exit 1; }
-          [ -n "$SSH_PASSWORD" ] || { echo "ERROR: SSH_PASSWORD secret is not set"; exit 1; }
-          echo "Secrets OK — connecting to: $SSH_HOST as $SSH_USERNAME"
+          [ -n "$FTP_HOST" ] || { echo "ERROR: SSH_HOST secret not set"; exit 1; }
+          [ -n "$FTP_USER" ] || { echo "ERROR: SSH_USERNAME secret not set"; exit 1; }
+          [ -n "$FTP_PASS" ] || { echo "ERROR: SSH_PASSWORD secret not set"; exit 1; }
+          echo "OK — host: $FTP_HOST, user: $FTP_USER"
 
       - name: Install lftp
         run: sudo apt-get install -y lftp
 
-      - name: Deploy via FTP
+      - name: Deploy theme via FTP
         env:
-          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
-          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
-          SSH_HOST: ${{ secrets.SSH_HOST }}
+          FTP_HOST: ${{ secrets.SSH_HOST }}
+          FTP_USER: ${{ secrets.SSH_USERNAME }}
+          FTP_PASS: ${{ secrets.SSH_PASSWORD }}
         run: |
-          lftp -u "$SSH_USERNAME","$SSH_PASSWORD" ftps://$SSH_HOST << 'EOF'
+          lftp -u "$FTP_USER","$FTP_PASS" ftps://$FTP_HOST << 'LFTP'
           set ftp:ssl-allow yes
           set ftp:ssl-force yes
           set ssl:verify-certificate no
-          set net:timeout 30
-          set net:max-retries 3
+          set net:timeout 60
+          set net:max-retries 5
           set ftp:passive-mode yes
+
+          echo "--- root listing ---"
           ls
-          EOF
+
+          echo "--- deploying theme ---"
+          mirror --reverse --delete --verbose \
+            wp-content/themes/comedyadv \
+            /customers/8/2/5/cvuyu2f87/webroots/sites/httpdocs/wp-content/themes/comedyadv
+
+          echo "--- done ---"
+          LFTP
