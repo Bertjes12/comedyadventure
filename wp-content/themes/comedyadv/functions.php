@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'COMEDYADV_VERSION', '1.2.0' );
+define( 'COMEDYADV_VERSION', '1.2.1' );
 define( 'COMEDYADV_DEMO_VERSION', '1.9.0' ); // bump to trigger demo re-import on next admin load
 define( 'COMEDYADV_MENU_VERSION', '2' );     // bump to rebuild the primary nav menu on next admin load
 define( 'COMEDYADV_DIR', get_template_directory() );
@@ -41,6 +41,10 @@ function comedyadv_enqueue_assets() {
 	wp_enqueue_style( 'comedyadv-styles', get_theme_file_uri( 'assets/css/styles.css' ), array( 'comedyadv-fonts' ), COMEDYADV_VERSION );
 	wp_enqueue_style( 'comedyadv-style',  get_stylesheet_uri(), array( 'comedyadv-styles' ), COMEDYADV_VERSION );
 	wp_enqueue_script( 'comedyadv-main',  get_theme_file_uri( 'assets/js/main.js' ), array(), COMEDYADV_VERSION, true );
+	wp_localize_script( 'comedyadv-main', 'comedyadv_ajax', array(
+		'url'   => admin_url( 'admin-ajax.php' ),
+		'nonce' => wp_create_nonce( 'comedyadv_contact' ),
+	) );
 }
 add_action( 'wp_enqueue_scripts', 'comedyadv_enqueue_assets' );
 
@@ -479,4 +483,141 @@ function comedyadv_show_long_date( $date ) {
 	}
 	$months = array( 1=>'januari',2=>'februari',3=>'maart',4=>'april',5=>'mei',6=>'juni',7=>'juli',8=>'augustus',9=>'september',10=>'oktober',11=>'november',12=>'december' );
 	return (int) gmdate( 'j', $ts ) . ' ' . $months[ (int) gmdate( 'n', $ts ) ] . ' ' . gmdate( 'Y', $ts );
+}
+
+/**
+ * AJAX handler for the contact/booking form.
+ * Accessible for logged-in and logged-out visitors alike.
+ */
+function comedyadv_handle_contact_form() {
+	check_ajax_referer( 'comedyadv_contact', 'nonce' );
+
+	$naam     = sanitize_text_field( wp_unslash( $_POST['naam']     ?? '' ) );
+	$bedrijf  = sanitize_text_field( wp_unslash( $_POST['bedrijf']  ?? '' ) );
+	$email    = sanitize_email(       wp_unslash( $_POST['email']    ?? '' ) );
+	$telefoon = sanitize_text_field( wp_unslash( $_POST['telefoon'] ?? '' ) );
+	$type     = sanitize_text_field( wp_unslash( $_POST['type']     ?? '' ) );
+	$datum    = sanitize_text_field( wp_unslash( $_POST['datum']    ?? '' ) );
+	$gasten   = sanitize_text_field( wp_unslash( $_POST['gasten']   ?? '' ) );
+	$stad     = sanitize_text_field( wp_unslash( $_POST['stad']     ?? '' ) );
+	$format   = sanitize_text_field( wp_unslash( $_POST['format']   ?? '' ) );
+	$bericht  = sanitize_textarea_field( wp_unslash( $_POST['bericht'] ?? '' ) );
+
+	if ( ! $naam || ! is_email( $email ) ) {
+		wp_send_json_error( array( 'message' => 'Vul je naam en een geldig e-mailadres in.' ) );
+	}
+
+	$to      = 'info@comedyadventure.nl';
+	$subject = 'Nieuwe boekingsaanvraag van ' . $naam;
+
+	$body  = "Naam:             {$naam}\n";
+	if ( $bedrijf )  $body .= "Bedrijf:          {$bedrijf}\n";
+	$body .= "E-mail:           {$email}\n";
+	if ( $telefoon ) $body .= "Telefoon:         {$telefoon}\n";
+	if ( $type )     $body .= "Type evenement:   {$type}\n";
+	if ( $datum )    $body .= "Gewenste datum:   {$datum}\n";
+	if ( $gasten )   $body .= "Aantal gasten:    {$gasten}\n";
+	if ( $stad )     $body .= "Stad / locatie:   {$stad}\n";
+	if ( $format )   $body .= "Gewenst format:   {$format}\n";
+	if ( $bericht )  $body .= "\nBericht:\n{$bericht}\n";
+
+	$headers = array(
+		'Content-Type: text/plain; charset=UTF-8',
+		'Reply-To: ' . $naam . ' <' . $email . '>',
+	);
+
+	$sent = wp_mail( $to, $subject, $body, $headers );
+
+	if ( $sent ) {
+		wp_send_json_success( array( 'message' => 'Bedankt! We nemen binnen 24 uur contact met je op.' ) );
+	} else {
+		wp_send_json_error( array( 'message' => 'Er ging iets mis. Bel ons op 020-700 94 39 of mail naar info@comedyadventure.nl.' ) );
+	}
+}
+add_action( 'wp_ajax_comedyadv_contact',        'comedyadv_handle_contact_form' );
+add_action( 'wp_ajax_nopriv_comedyadv_contact', 'comedyadv_handle_contact_form' );
+
+/**
+ * SEO: betere paginatitel voor locatie-pagina's.
+ */
+add_filter( 'document_title_parts', 'comedyadv_locatie_title_parts' );
+function comedyadv_locatie_title_parts( $title ) {
+	if ( ! is_singular( 'locatie' ) ) {
+		return $title;
+	}
+	$title['title'] = 'Comedyshow in ' . get_the_title() . ' — Tickets & Reserveringen';
+	return $title;
+}
+
+/**
+ * SEO: meta description, canonical, Open Graph en Twitter Card voor locatie-pagina's.
+ */
+add_action( 'wp_head', 'comedyadv_locatie_seo_meta', 1 );
+function comedyadv_locatie_seo_meta() {
+	if ( ! is_singular( 'locatie' ) ) {
+		return;
+	}
+
+	$id        = get_queried_object_id();
+	$city_name = get_the_title( $id );
+	$lead      = get_post_meta( $id, '_comedyadv_city_lead', true );
+	$image_url = comedyadv_image_url( $id, 'large' );
+
+	// Zoek upcoming show voor beschrijving / afbeelding
+	$show_id = (int) get_post_meta( $id, '_comedyadv_featured_show', true );
+	if ( ! $show_id ) {
+		$auto = get_posts( array(
+			'post_type'      => 'show',
+			'posts_per_page' => 1,
+			'meta_key'       => '_comedyadv_show_date',
+			'orderby'        => 'meta_value',
+			'order'          => 'ASC',
+			'meta_query'     => array(
+				'relation' => 'AND',
+				array( 'key' => '_comedyadv_show_city', 'value' => $id ),
+				array( 'key' => '_comedyadv_show_date', 'value' => gmdate( 'Y-m-d' ), 'compare' => '>=' ),
+			),
+		) );
+		if ( $auto ) {
+			$show_id = (int) $auto[0]->ID;
+		}
+	}
+
+	// Beschrijving opbouwen (max 155 tekens)
+	$description = $lead;
+	if ( ! $description && $show_id ) {
+		$description = get_post_meta( $show_id, '_comedyadv_show_lead', true );
+	}
+	if ( ! $description ) {
+		$description = 'Beleef een onvergetelijke comedyshow in ' . $city_name . '. Reserveer je plekken via Comedy Adventure — professionele comedy op locatie.';
+	}
+	$description = mb_substr( wp_strip_all_tags( $description ), 0, 155 );
+
+	// Afbeelding: locatie → show als fallback
+	if ( ! $image_url && $show_id ) {
+		$image_url = comedyadv_image_url( $show_id, 'large' );
+	}
+
+	$page_url  = get_permalink( $id );
+	$site_name = get_bloginfo( 'name' );
+	$og_title  = 'Comedyshow in ' . $city_name . ' | ' . $site_name;
+
+	echo '<meta name="description" content="' . esc_attr( $description ) . '" />' . "\n";
+	echo '<link rel="canonical" href="' . esc_url( $page_url ) . '" />' . "\n";
+	echo '<meta property="og:type" content="website" />' . "\n";
+	echo '<meta property="og:title" content="' . esc_attr( $og_title ) . '" />' . "\n";
+	echo '<meta property="og:description" content="' . esc_attr( $description ) . '" />' . "\n";
+	echo '<meta property="og:url" content="' . esc_url( $page_url ) . '" />' . "\n";
+	echo '<meta property="og:site_name" content="' . esc_attr( $site_name ) . '" />' . "\n";
+	echo '<meta property="og:locale" content="nl_NL" />' . "\n";
+	if ( $image_url ) {
+		echo '<meta property="og:image" content="' . esc_url( $image_url ) . '" />' . "\n";
+		echo '<meta property="og:image:alt" content="' . esc_attr( 'Comedyshow in ' . $city_name ) . '" />' . "\n";
+	}
+	echo '<meta name="twitter:card" content="summary_large_image" />' . "\n";
+	echo '<meta name="twitter:title" content="' . esc_attr( $og_title ) . '" />' . "\n";
+	echo '<meta name="twitter:description" content="' . esc_attr( $description ) . '" />' . "\n";
+	if ( $image_url ) {
+		echo '<meta name="twitter:image" content="' . esc_url( $image_url ) . '" />' . "\n";
+	}
 }

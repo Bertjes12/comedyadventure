@@ -769,6 +769,11 @@ a.card:focus-visible { outline: 3px solid var(--orange); outline-offset: 4px; }
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 20px;
 }
+@media (max-width: 620px) {
+  .city-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 .city-card {
   position: relative;
@@ -1600,11 +1605,12 @@ a.card:focus-visible { outline: 3px solid var(--orange); outline-offset: 4px; }
     right: 0;
     width: min(360px, 100%);
     height: 100vh;
-    background: var(--white);
+    background: #0B0F19;
     padding: 100px 32px 32px;
     transform: translateX(100%);
     transition: transform var(--transition);
     box-shadow: var(--shadow-lg);
+    z-index: 100;
   }
   .nav.is-open { transform: translateX(0); }
   .nav__list {
@@ -1617,7 +1623,7 @@ a.card:focus-visible { outline: 3px solid var(--orange); outline-offset: 4px; }
     font-size: 1.1rem;
     border-radius: var(--radius);
   }
-  .nav__cta { margin-left: 0; margin-top: 12px; text-align: center; }
+  .nav__cta { margin-left: 0; margin-top: 28px; text-align: center; }
   body.nav-open { overflow: hidden; }
   body.nav-open::after {
     content: '';
@@ -4405,9 +4411,17 @@ a.contact-info__value:hover { color: #FF5500; }
 .single-locatie .event-main__body > .event-main__section {
   background: #fff;
   border-radius: 20px;
-  padding: 32px;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.05);
+  padding: 52px 36px 40px;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.06);
   margin-bottom: 20px;
+  border-top: 3px solid #FF5500;
+  position: relative;
+  overflow: hidden;
+}
+.single-locatie .event-main__body > .event-main__section:first-of-type {
+  border-top: none;
+  padding-top: 44px;
+  background: linear-gradient(145deg, #fff 70%, #fff5f0 100%);
 }
 .single-locatie .event-ticket-card {
   background: #fff;
@@ -4822,25 +4836,178 @@ a.contact-info__value:hover { color: #FF5500; }
 .single-locatie .event-section__title {
   font-family: 'Bricolage Grotesque', sans-serif;
   font-weight: 800;
-  font-size: 1.4rem;
+  font-size: 1.35rem;
   color: var(--gz-black);
   letter-spacing: -0.02em;
   text-transform: none;
-  margin-bottom: 20px;
-  display: block;
+  margin-bottom: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   background: none;
-  padding: 0 0 12px;
+  padding: 0;
   border-radius: 0;
   transform: none;
-  border-bottom: 2px solid #FF5500;
-  width: fit-content;
+  border: none;
+}
+.single-locatie .event-section__title::after {
+  content: '';
+  display: block;
+  height: 3px;
+  width: 32px;
+  background: #FF5500;
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 .single-locatie .event-content p,
 .single-locatie .event-section p {
-  color: #444;
-  line-height: 1.75;
+  color: #3a3a3a;
+  font-size: 1.05rem;
+  line-height: 1.82;
   font-family: 'Bricolage Grotesque', sans-serif;
+  margin-bottom: 1em;
 }
+.single-locatie .event-content p:last-child { margin-bottom: 0; }
+
+/* Eerste alinea: editoriale intro met oranje left-bar */
+.single-locatie .event-content > p:first-child {
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: #111;
+  line-height: 1.72;
+  border-left: 3px solid #FF5500;
+  padding-left: 18px;
+  margin-left: -18px;
+}
+
+/* Lead-alinea boven de event-content */
+.single-locatie .event-main__section > p {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 1.12rem;
+  font-weight: 600;
+  color: #111;
+  line-height: 1.72;
+  margin-bottom: 16px;
+}
+
+/* Headings in WP-content */
+.single-locatie .event-content h2 {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--gz-black);
+  letter-spacing: -0.02em;
+  margin: 2em 0 0.6em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.single-locatie .event-content h2::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  background: #FF5500;
+  border-radius: 3px;
+  flex-shrink: 0;
+  transform: rotate(12deg);
+}
+.single-locatie .event-content h3 {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #FF5500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.8rem;
+  margin: 1.6em 0 0.4em;
+}
+
+/* Accentwoorden */
+.single-locatie .event-content strong,
+.single-locatie .event-content b {
+  font-weight: 800;
+  color: #0A0A0A;
+}
+.single-locatie .event-content mark {
+  background: linear-gradient(104deg, #fff5b1 0%, #ffe066 100%);
+  color: #111;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+/* Blockquote */
+.single-locatie .event-content blockquote {
+  position: relative;
+  font-size: 1.12rem;
+  font-style: normal;
+  font-weight: 500;
+  color: #222;
+  padding: 24px 24px 20px 52px;
+  margin: 1.8em 0;
+  background: #fff9f5;
+  border-radius: 16px;
+  border: 1.5px solid #FFD0B5;
+}
+.single-locatie .event-content blockquote::before {
+  content: '"';
+  font-family: 'Anton', sans-serif;
+  font-size: 3.5rem;
+  color: #FF5500;
+  position: absolute;
+  top: 0px;
+  left: 14px;
+  line-height: 1;
+}
+
+/* Lijsten: pijl-bullets */
+.single-locatie .event-content ul {
+  list-style: none;
+  padding-left: 0;
+  margin-bottom: 1em;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 1.05rem;
+  color: #3a3a3a;
+}
+.single-locatie .event-content ul li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.single-locatie .event-content ul li::before {
+  content: '→';
+  color: #FF5500;
+  font-weight: 800;
+  font-size: 0.9em;
+  flex-shrink: 0;
+}
+.single-locatie .event-content ol {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 1.05rem;
+  color: #3a3a3a;
+  line-height: 1.75;
+  padding-left: 1.4em;
+  margin-bottom: 1em;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.single-locatie .event-content ol li::marker {
+  color: #FF5500;
+  font-weight: 700;
+}
+.single-locatie .event-content a {
+  color: #FF5500;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+  transition: opacity 0.15s;
+}
+.single-locatie .event-content a:hover { opacity: 0.75; }
 
 /* ── Agenda items ── */
 .single-locatie .agenda-list { gap: 10px; }

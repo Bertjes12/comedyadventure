@@ -185,7 +185,7 @@ while ( have_posts() ) : the_post();
 					<div class="locatie-slider__track" data-slider-track>
 						<?php foreach ( $slider_images as $img ) : ?>
 						<div class="locatie-slider__slide">
-							<img src="<?php echo esc_url( $img ); ?>" alt="<?php echo esc_attr( $city_name ); ?>" />
+							<img src="<?php echo esc_url( $img ); ?>" alt="<?php echo esc_attr( 'Comedyshow in ' . $city_name . ( $show_title ? ' — ' . $show_title : '' ) ); ?>" />
 						</div>
 						<?php endforeach; ?>
 					</div>
@@ -567,6 +567,110 @@ if ( $other_city_shows ) : ?>
 		</div>
 	</div>
 </section>
+
+<?php
+// ── JSON-LD Structured Data ──────────────────────────────────────────────────
+$schema_items = array();
+
+// BreadcrumbList
+$schema_items[] = array(
+	'@type'           => 'BreadcrumbList',
+	'itemListElement' => array(
+		array( '@type' => 'ListItem', 'position' => 1, 'name' => 'Home',     'item' => home_url( '/' ) ),
+		array( '@type' => 'ListItem', 'position' => 2, 'name' => 'Locaties', 'item' => $loc_url ),
+		array( '@type' => 'ListItem', 'position' => 3, 'name' => $city_name, 'item' => get_permalink() ),
+	),
+);
+
+// Event schema
+if ( $show_id && $show_date ) {
+	$start_dt = $show_date . ( $show_time ? 'T' . $show_time . ':00' : '' );
+	$event = array(
+		'@type'               => 'Event',
+		'name'                => $show_title ?: ( 'Comedyshow in ' . $city_name ),
+		'startDate'           => $start_dt,
+		'eventStatus'         => 'https://schema.org/EventScheduled',
+		'eventAttendanceMode' => 'https://schema.org/OfflineEventAttendanceMode',
+		'organizer'           => array(
+			'@type' => 'Organization',
+			'name'  => 'Comedy Adventure',
+			'url'   => home_url( '/' ),
+		),
+	);
+
+	$desc_raw = $show_lead ?: $lead ?: wp_strip_all_tags( get_the_content() );
+	if ( $desc_raw ) {
+		$event['description'] = mb_substr( wp_strip_all_tags( $desc_raw ), 0, 300 );
+	}
+	if ( $hero_image ) {
+		$event['image'] = $hero_image;
+	}
+	if ( $show_venue || $show_address_l1 ) {
+		$place = array( '@type' => 'Place' );
+		if ( $show_venue ) {
+			$place['name'] = $show_venue;
+		}
+		$addr = array( '@type' => 'PostalAddress', 'addressCountry' => 'NL' );
+		if ( $show_address_l1 ) $addr['streetAddress']   = $show_address_l1;
+		if ( $show_address_l2 ) $addr['addressLocality'] = $show_address_l2;
+		$place['address'] = $addr;
+		$event['location'] = $place;
+	}
+	if ( $show_price ) {
+		$price_clean = str_replace( ',', '.', preg_replace( '/[^0-9,.]/', '', $show_price ) );
+		$event['offers'] = array(
+			'@type'         => 'Offer',
+			'price'         => $price_clean ?: $show_price,
+			'priceCurrency' => 'EUR',
+			'availability'  => ( $show_date >= $today )
+				? 'https://schema.org/InStock'
+				: 'https://schema.org/SoldOut',
+			'url'           => get_permalink(),
+		);
+	}
+	if ( $show_comedians ) {
+		$performers = array();
+		foreach ( $show_comedians as $comedian ) {
+			$performers[] = array(
+				'@type' => 'Person',
+				'name'  => $comedian->post_title,
+				'url'   => get_permalink( $comedian->ID ),
+			);
+		}
+		$event['performer'] = count( $performers ) === 1 ? $performers[0] : $performers;
+	}
+	$schema_items[] = $event;
+}
+
+// FAQPage schema
+if ( ! empty( $show_faq ) ) {
+	$faq_entities = array();
+	foreach ( $show_faq as $faq_item ) {
+		if ( ! empty( $faq_item['q'] ) && ! empty( $faq_item['a'] ) ) {
+			$faq_entities[] = array(
+				'@type'          => 'Question',
+				'name'           => $faq_item['q'],
+				'acceptedAnswer' => array(
+					'@type' => 'Answer',
+					'text'  => wp_strip_all_tags( $faq_item['a'] ),
+				),
+			);
+		}
+	}
+	if ( $faq_entities ) {
+		$schema_items[] = array(
+			'@type'      => 'FAQPage',
+			'mainEntity' => $faq_entities,
+		);
+	}
+}
+?>
+<script type="application/ld+json">
+<?php echo wp_json_encode(
+	array( '@context' => 'https://schema.org', '@graph' => $schema_items ),
+	JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT
+); ?>
+</script>
 
 <?php endwhile; ?>
 <?php get_footer(); ?>
