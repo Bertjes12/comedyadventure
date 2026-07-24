@@ -161,9 +161,13 @@ while ( have_posts() ) : the_post();
 				<?php endif; ?>
 
 				<div class="locatie-hero__actions">
-					<a href="<?php echo esc_url( $contact_url ); ?>" class="btn btn--primary workshop-hero__cta">
+					<button type="button" class="btn btn--primary workshop-hero__cta" data-reserveer-open
+						data-show="<?php echo esc_attr( $show_title ); ?>"
+						data-stad="<?php echo esc_attr( $city_name ); ?>"
+						data-datum="<?php echo esc_attr( $date_long ); ?>"
+						data-tijd="<?php echo esc_attr( $show_time ); ?>">
 						Reserveer nu <span class="btn__arrow">&rarr;</span>
-					</a>
+					</button>
 					<button class="btn-share" onclick="if(navigator.share){navigator.share({title:document.title,url:location.href});}else{navigator.clipboard.writeText(location.href);this.textContent='Link gekopieerd!';}">
 						<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M18 16c-.8 0-1.5.3-2 .8l-7.3-4.2c.1-.2.1-.4.1-.6s0-.4-.1-.6L16 7.2c.5.5 1.2.8 2 .8 1.7 0 3-1.3 3-3s-1.3-3-3-3-3 1.3-3 3c0 .2 0 .4.1.6L7.8 9.8C7.3 9.3 6.6 9 5.8 9c-1.7 0-3 1.3-3 3s1.3 3 3 3c.8 0 1.5-.3 2-.8l7.3 4.2c-.1.2-.1.3-.1.5 0 1.6 1.3 2.9 2.9 2.9s2.9-1.3 2.9-2.9-1.3-2.9-2.9-2.9z"/></svg>
 						Deel dit evenement
@@ -319,7 +323,11 @@ while ( have_posts() ) : the_post();
 								<?php endif; ?>
 							</div>
 							<?php if ( ! $is_p ) : ?>
-								<a href="<?php echo esc_url( $contact_url ); ?>" class="btn btn--primary">Tickets</a>
+								<button type="button" class="btn btn--primary" data-reserveer-open
+									data-show="<?php echo esc_attr( $s->post_title ); ?>"
+									data-stad="<?php echo esc_attr( $city_name ); ?>"
+									data-datum="<?php echo esc_attr( comedyadv_show_long_date( $d ) ); ?>"
+									data-tijd="<?php echo esc_attr( $t ); ?>">Tickets</button>
 							<?php endif; ?>
 						</article>
 						<?php endforeach; ?>
@@ -435,9 +443,13 @@ while ( have_posts() ) : the_post();
 						</li>
 						<?php endif; ?>
 					</ul>
-					<a href="<?php echo esc_url( $contact_url ); ?>" class="btn btn--primary" style="width:100%;justify-content:center;margin-top:20px;">
+					<button type="button" class="btn btn--primary" style="width:100%;justify-content:center;margin-top:20px;" data-reserveer-open
+						data-show="<?php echo esc_attr( $show_title ); ?>"
+						data-stad="<?php echo esc_attr( $city_name ); ?>"
+						data-datum="<?php echo esc_attr( $date_long ); ?>"
+						data-tijd="<?php echo esc_attr( $show_time ); ?>">
 						Reserveer nu <span class="btn__arrow">&rarr;</span>
-					</a>
+					</button>
 					<p class="ticket-no-obligation">✓ Vrijblijvende aanvraag — geen verplichtingen</p>
 					<button class="btn-share" onclick="if(navigator.share){navigator.share({title:document.title,url:location.href});}else{navigator.clipboard.writeText(location.href);this.textContent='Link gekopieerd!';}">
 						<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M18 16c-.8 0-1.5.3-2 .8l-7.3-4.2c.1-.2.1-.4.1-.6s0-.4-.1-.6L16 7.2c.5.5 1.2.8 2 .8 1.7 0 3-1.3 3-3s-1.3-3-3-3-3 1.3-3 3c0 .2 0 .4.1.6L7.8 9.8C7.3 9.3 6.6 9 5.8 9c-1.7 0-3 1.3-3 3s1.3 3 3 3c.8 0 1.5-.3 2-.8l7.3 4.2c-.1.2-.1.3-.1.5 0 1.6 1.3 2.9 2.9 2.9s2.9-1.3 2.9-2.9-1.3-2.9-2.9-2.9z"/></svg>

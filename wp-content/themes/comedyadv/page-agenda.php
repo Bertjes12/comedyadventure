@@ -87,7 +87,13 @@ $past = get_posts( array(
 						<p class="lineup-card__meta"><?php echo esc_html( implode( ' · ', $meta ) ); ?></p>
 					<?php endif; ?>
 				</div>
-				<a href="<?php echo esc_url( $contact_url ); ?>" class="btn btn--primary lineup-card__btn">Tickets</a>
+				<button type="button" class="btn btn--primary lineup-card__btn" data-reserveer-open
+					data-show="<?php echo esc_attr( $show->post_title ); ?>"
+					data-stad="<?php echo esc_attr( $city_lbl ?: $venue ); ?>"
+					data-datum="<?php echo esc_attr( comedyadv_show_long_date( $date ) ); ?>"
+					data-tijd="<?php echo esc_attr( $time ); ?>">
+					Tickets
+				</button>
 			</article>
 			<?php endforeach; ?>
 		</div>
